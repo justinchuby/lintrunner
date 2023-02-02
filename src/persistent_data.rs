@@ -47,7 +47,7 @@ impl RunInfo {
     // this run.
     fn dir_name(&self) -> String {
         let args = blake3::hash(self.args.join("_").as_bytes()).to_string();
-        self.timestamp.clone().replace(":", "-").replace("+", "_") + "_" + &args
+        self.timestamp.clone().replace(":", "-").replace("+", "_") + "_" + &args[..16]
     }
 }
 
@@ -61,7 +61,7 @@ impl PersistentDataStore {
 
         // Now compute one specific to this lintrunner config.
         let config_path_hash = blake3::hash(config_path.to_string_lossy().as_bytes()).to_string();
-        let config_data_dir = project_data_dir.join(config_path_hash);
+        let config_data_dir = project_data_dir.join(&config_path_hash[..16]);
 
         // Create the runs dir as well.
         let runs_dir = config_data_dir.join(RUNS_DIR_NAME);
