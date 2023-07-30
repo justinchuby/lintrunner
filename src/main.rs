@@ -13,11 +13,11 @@ use lintrunner::{
     persistent_data::{ExitInfo, PersistentDataStore, RunInfo},
     rage::do_rage,
     render::print_error,
-    PathsOpt, RenderOpt, RevisionOpt, git::get_head,
+    version_control, PathsOpt, RenderOpt, RevisionOpt,
 };
 use log::debug;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Parser)]
 #[clap(version, name = "lintrunner", infer_subcommands(true))]
@@ -163,7 +163,8 @@ fn do_main() -> Result<i32> {
     debug!("Version: {VERSION}");
     debug!("Passed args: {:?}", std::env::args());
     debug!("Computed args: {:?}", args);
-    debug!("Current rev: {}", get_head()?);
+    let repo = version_control::Repo::new()?;
+    debug!("Current rev: {}", repo.get_head()?);
 
     let cmd = args.cmd.unwrap_or(SubCommand::Lint);
     let lint_runner_config = LintRunnerConfig::new(&config_path)?;
@@ -211,6 +212,13 @@ fn do_main() -> Result<i32> {
         RevisionOpt::Revision(revision)
     } else if let Some(merge_base_with) = args.merge_base_with {
         RevisionOpt::MergeBaseWith(merge_base_with)
+    } else if lint_runner_config.merge_base_with.is_some() {
+        RevisionOpt::MergeBaseWith(
+            lint_runner_config
+                .merge_base_with
+                .clone()
+                .expect("Merge base should be defined"),
+        )
     } else {
         RevisionOpt::Head
     };
@@ -237,6 +245,7 @@ fn do_main() -> Result<i32> {
         SubCommand::Format => {
             check_init_changed(&persistent_data_store, &lint_runner_config)?;
             do_lint(
+                &repo,
                 linters,
                 paths_opt,
                 true, // always apply patches when we use the format command
@@ -250,6 +259,7 @@ fn do_main() -> Result<i32> {
             // Default command is to just lint.
             check_init_changed(&persistent_data_store, &lint_runner_config)?;
             do_lint(
+                &repo,
                 linters,
                 paths_opt,
                 args.apply_patches,

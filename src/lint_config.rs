@@ -10,6 +10,11 @@ use serde::{Deserialize, Serialize};
 pub struct LintRunnerConfig {
     #[serde(rename = "linter")]
     pub linters: Vec<LintConfig>,
+
+    /// The default value for the `merge_base_with` parameter.
+    /// Recommend setting this is set to your default branch, e.g. `main`
+    #[serde()]
+    pub merge_base_with: Option<String>,
 }
 
 fn is_false(b: &bool) -> bool {
@@ -173,10 +178,7 @@ pub fn get_linters_from_config(
             );
         }
 
-        linters = linters
-            .into_iter()
-            .filter(|linter| taken_linters.contains(&linter.code))
-            .collect();
+        linters.retain(|linter| taken_linters.contains(&linter.code));
     }
 
     // Apply --skip
@@ -190,10 +192,7 @@ pub fn get_linters_from_config(
                 all_linters,
             );
         }
-        linters = linters
-            .into_iter()
-            .filter(|linter| !skipped_linters.contains(&linter.code))
-            .collect();
+        linters.retain(|linter| !skipped_linters.contains(&linter.code));
     }
     Ok(linters)
 }
